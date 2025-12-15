@@ -38,7 +38,7 @@ app.get('/', (req, res) => {
 
 app.get('/api/ping', (req, res) => {
   res.json({
-    message: 'Pong from Railway!',
+    message: 'Pong from Railway! Just to make sure CORS is working correctly.',
     timestamp: new Date().toISOString(),
     requestId: req.headers['x-request-id'] || null
   });
