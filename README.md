@@ -1,6 +1,6 @@
 # Bizyaab Server
 
-Simple Express API designed to be deployed on Railway. The `/api/ping` route returns JSON so you can test CORS from the Next.js frontend on Vercel.
+Simple Express API designed to be deployed on Railway. The `/api/ping` route returns JSON so you can test connectivity, and `/api/hello` accepts a JSON body `{ "name": "Jane" }` and responds with a personalized greeting.
 
 ## Getting started
 
@@ -20,6 +20,6 @@ npm run dev
 3. Add environment variables:
    - `PORT=4000` (Railway also injects `PORT`, so you can omit this)
    - `CORS_ORIGIN=https://your-vercel-domain.vercel.app`
-4. Redeploy and copy the public URL, e.g. `https://bizyaab-api.up.railway.app/api/ping`
+4. Redeploy and copy the public URL, e.g. `https://bizyaab-api.up.railway.app`
 
-Point the frontend's `NEXT_PUBLIC_API_URL` at the Railway URL to verify cross-origin requests.
+Point the frontend's `BACKEND_API_BASE_URL` at the Railway URL to send both the ping and hello proxy calls through Next.js.

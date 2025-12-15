@@ -44,6 +44,21 @@ app.get('/api/ping', (req, res) => {
   });
 });
 
+app.post('/api/hello', (req, res) => {
+  const { name } = req.body || {};
+
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  const trimmed = name.trim();
+
+  return res.json({
+    message: `Hello ${trimmed}!`,
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.use((err, req, res, next) => {
   if (err.message === 'Not allowed by CORS') {
     return res.status(403).json({ error: err.message });
