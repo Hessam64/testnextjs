@@ -26,6 +26,7 @@ npm run dev
    - `CORS_ORIGIN=https://your-vercel-domain.vercel.app`
    - `DATABASE_URL=postgresql://postgres:password@db.supabase.co:5432/postgres`
    - Optional `DB_SSL=prefer` (default) or `DB_SSL=off` if you run Postgres locally without TLS
+   - `DB_FORCE_IPV4=true` to force IPv4 connections when your provider advertises IPv6 (Supabase does, and Railway cannot reach it over IPv6)
 4. Redeploy and copy the public URL, e.g. `https://bizyaab-api.up.railway.app`
 
 Point the frontend's `BACKEND_API_BASE_URL` at the Railway URL to send all proxy calls (ping, hello, businesses) through Next.js.
