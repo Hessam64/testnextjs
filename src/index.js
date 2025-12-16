@@ -1,9 +1,27 @@
 const express = require('express');
 const cors = require('cors');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()) : [];
+const sslPreference = (process.env.DB_SSL || '').toLowerCase();
+
+const dbPool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl:
+        sslPreference === 'false' || sslPreference === 'off'
+          ? false
+          : {
+              rejectUnauthorized: sslPreference === 'strict'
+            }
+    })
+  : null;
+
+if (!dbPool) {
+  console.warn('DATABASE_URL is not set. /api/businesses will return a 500 until configured.');
+}
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -57,6 +75,22 @@ app.post('/api/hello', (req, res) => {
     message: `Hello ${trimmed}!`,
     timestamp: new Date().toISOString()
   });
+});
+
+app.get('/api/businesses', async (req, res) => {
+  if (!dbPool) {
+    return res.status(500).json({ error: 'Database connection is not configured' });
+  }
+
+  try {
+    const { rows } = await dbPool.query(
+      'SELECT id, name, created_at FROM "Businesses" ORDER BY created_at DESC LIMIT 100;'
+    );
+    return res.json({ businesses: rows });
+  } catch (error) {
+    console.error('Error fetching businesses:', error);
+    return res.status(500).json({ error: 'Failed to fetch businesses' });
+  }
 });
 
 app.use((err, req, res, next) => {
