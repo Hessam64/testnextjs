@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
-const { URL } = require('url');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -9,43 +8,23 @@ const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split('
 const sslPreference = (process.env.DB_SSL || '').toLowerCase();
 const forceIpv4 = ['1', 'true', 'yes'].includes((process.env.DB_FORCE_IPV4 || '').toLowerCase());
 
-const buildDbConfig = () => {
-  if (!process.env.DATABASE_URL) {
-    return null;
-  }
-
-  try {
-    const dbUrl = new URL(process.env.DATABASE_URL);
-    const config = {
-      host: dbUrl.hostname,
-      port: Number(dbUrl.port) || 5432,
-      user: decodeURIComponent(dbUrl.username),
-      password: decodeURIComponent(dbUrl.password),
-      database: dbUrl.pathname.replace(/^\//, ''),
+const poolConfig = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
       ssl:
         sslPreference === 'false' || sslPreference === 'off'
           ? false
           : {
               rejectUnauthorized: sslPreference === 'strict'
-            }
-    };
-
-    if (forceIpv4) {
-      config.family = 4;
+            },
+      family: forceIpv4 ? 4 : undefined
     }
+  : null;
 
-    return config;
-  } catch (error) {
-    console.error('Failed to parse DATABASE_URL. Check your connection string.', error);
-    return null;
-  }
-};
-
-const dbConfig = buildDbConfig();
-const dbPool = dbConfig ? new Pool(dbConfig) : null;
+const dbPool = poolConfig ? new Pool(poolConfig) : null;
 
 if (!dbPool) {
-  console.warn('DATABASE_URL is not set or invalid. /api/businesses will return a 500 until configured.');
+  console.warn('DATABASE_URL is not set. /api/businesses will return a 500 until configured.');
 }
 
 const corsOptions = {
