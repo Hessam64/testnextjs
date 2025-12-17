@@ -91,11 +91,17 @@ app.get('/api/businesses', async (req, res) => {
     return res.status(500).json({ error: 'Supabase connection is not configured' });
   }
 
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Missing Authorization header' });
+  }
+
   try {
     const response = await fetch(supabaseEndpoint, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Authorization: authHeader,
         Accept: 'application/json'
       }
     });
