@@ -1,30 +1,21 @@
+const path = require('path');
+const dotenv = require('dotenv');
+
+dotenv.config({ path: path.resolve(__dirname, '..', '.env.local') });
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
+
 const express = require('express');
 const cors = require('cors');
-const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()) : [];
-const sslPreference = (process.env.DB_SSL || '').toLowerCase();
-const forceIpv4 = ['1', 'true', 'yes'].includes((process.env.DB_FORCE_IPV4 || '').toLowerCase());
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_TABLE = process.env.SUPABASE_TABLE || 'Businesses';
 
-const poolConfig = process.env.DATABASE_URL
-  ? {
-      connectionString: process.env.DATABASE_URL,
-      ssl:
-        sslPreference === 'false' || sslPreference === 'off'
-          ? false
-          : {
-              rejectUnauthorized: sslPreference === 'strict'
-            },
-      family: forceIpv4 ? 4 : undefined
-    }
-  : null;
-
-const dbPool = poolConfig ? new Pool(poolConfig) : null;
-
-if (!dbPool) {
-  console.warn('DATABASE_URL is not set. /api/businesses will return a 500 until configured.');
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn('Supabase URL or key missing. /api/businesses will return a 500 until configured.');
 }
 
 const corsOptions = {
@@ -54,7 +45,7 @@ app.get('/', (req, res) => {
   res.json({
     status: 'ok',
     message: 'Bizyaab Railway-ready API',
-    hint: 'Hit /api/ping from your Next.js frontend to test CORS.'
+    hint: 'Use /api/ping, /api/hello, or /api/businesses to test integrations.'
   });
 });
 
@@ -81,16 +72,42 @@ app.post('/api/hello', (req, res) => {
   });
 });
 
+const buildSupabaseUrl = () => {
+  if (!SUPABASE_URL) {
+    return null;
+  }
+
+  const endpoint = new URL(`/rest/v1/${encodeURIComponent(SUPABASE_TABLE)}`, SUPABASE_URL);
+  endpoint.searchParams.set('select', 'id,name,created_at');
+  endpoint.searchParams.set('order', 'created_at.desc');
+  endpoint.searchParams.set('limit', '100');
+  return endpoint;
+};
+
+const supabaseEndpoint = buildSupabaseUrl();
+
 app.get('/api/businesses', async (req, res) => {
-  if (!dbPool) {
-    return res.status(500).json({ error: 'Database connection is not configured' });
+  if (!supabaseEndpoint || !SUPABASE_ANON_KEY) {
+    return res.status(500).json({ error: 'Supabase connection is not configured' });
   }
 
   try {
-    const { rows } = await dbPool.query(
-      'SELECT id, name, created_at FROM "Businesses" ORDER BY created_at DESC LIMIT 100;'
-    );
-    return res.json({ businesses: rows });
+    const response = await fetch(supabaseEndpoint, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Accept: 'application/json'
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Supabase error:', data);
+      return res.status(response.status).json({ error: 'Failed to fetch businesses from Supabase' });
+    }
+
+    return res.json({ businesses: data });
   } catch (error) {
     console.error('Error fetching businesses:', error);
     return res.status(500).json({ error: 'Failed to fetch businesses' });
